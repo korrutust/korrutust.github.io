@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korrutamine 5-ga</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #b5e7a0; /* Mündi pastellroheline taust */
+            color: black;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .question {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: black;
+        }
+        input {
+            font-size: 22px;
+            padding: 10px;
+            width: 100px;
+            text-align: center;
+            border: 2px solid #388E3C;
+            border-radius: 5px;
+        }
+        button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            background-color: #388E3C;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #2E7D32;
+        }
+        .correct {
+            color: green;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: red;
+            font-weight: bold;
+        }
+        #timer {
+            font-size: 20px;
+            font-weight: bold;
+            color: #D84315;
+        }
+        #score {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="startScreen">
+        <h1>Korrutamine 5-ga</h1>
+        <p>Vali aeg ühe küsimuse jaoks:</p>
+        <button onclick="startGame(5000)">5 sekundit</button>
+        <button onclick="startGame(10000)">10 sekundit</button>
+        <button onclick="startGame(15000)">15 sekundit</button>
+    </div>
+
+    <div class="container hidden" id="gameScreen">
+        <p class="question" id="questionText"></p>
+        <input type="number" id="answerInput">
+        <p id="timer">Aeg: <span id="timeLeft"></span>s</p>
+    </div>
+
+    <div class="container hidden" id="resultScreen">
+        <h2>Tulemused</h2>
+        <p id="score"></p>
+        <ul id="resultsList"></ul>
+        <button onclick="location.reload()">Mängi uuesti</button>
+    </div>
+
+    <script>
+        let problems = [
+            "1x5", "2x5", "3x5", "4x5", "5x5", "5x6", "5x7", "5x8", "5x9", "5x10",
+            "10x5", "9x5", "8x5", "7x5", "6x5", "5x5", "5x4", "5x3", "5x2", "5x1",
+        ];
+
+        let answers = {
+            "1x5": 5, "2x5": 10, "3x5": 15, "4x5": 20, "5x5": 25, "6x5": 30, "7x5": 35, "8x5": 40, "9x5": 45, "10x5": 50,
+            "5x10": 50, "5x9": 45, "5x8": 40, "5x7": 35, "5x6": 30, "5x5": 25, "5x4": 20, "5x3": 15, "5x2": 10, "5x1": 5
+        };
+
+        let shuffledProblems = [];
+        let currentProblemIndex = 0;
+        let timeLimit = 5000;
+        let timer;
+        let userAnswers = [];
+
+        function startGame(time) {
+            timeLimit = time;
+            shuffledProblems = [...problems].sort(() => Math.random() - 0.5).slice(0, 20);
+            currentProblemIndex = 0;
+            userAnswers = [];
+            document.getElementById("startScreen").classList.add("hidden");
+            document.getElementById("gameScreen").classList.remove("hidden");
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentProblemIndex >= shuffledProblems.length) {
+                endGame();
+                return;
+            }
+
+            let problem = shuffledProblems[currentProblemIndex];
+            document.getElementById("questionText").textContent = problem + " = ?";
+            document.getElementById("answerInput").value = "";
+            document.getElementById("answerInput").focus();
+            document.getElementById("timeLeft").textContent = (timeLimit / 1000).toFixed(0);
+
+            let timeLeft = timeLimit / 1000;
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById("timeLeft").textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    submitAnswer();
+                }
+            }, 1000);
+        }
+
+        function submitAnswer() {
+            clearInterval(timer);
+            let inputField = document.getElementById("answerInput");
+            let userAnswer = inputField.value.trim();
+            let problem = shuffledProblems[currentProblemIndex];
+            let correctAnswer = answers[problem];
+
+            if (userAnswer === "") {
+                userAnswers.push({ problem, userAnswer: "vastamata", correct: false, correctAnswer });
+            } else {
+                let isCorrect = parseInt(userAnswer) === correctAnswer;
+                userAnswers.push({ problem, userAnswer, correct: isCorrect, correctAnswer });
+            }
+
+            currentProblemIndex++;
+            nextQuestion();
+        }
+
+        document.getElementById("answerInput").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                submitAnswer();
+            }
+        });
+
+        function endGame() {
+            document.getElementById("gameScreen").classList.add("hidden");
+            document.getElementById("resultScreen").classList.remove("hidden");
+
+            let resultsList = document.getElementById("resultsList");
+            resultsList.innerHTML = "";
+
+            let correctCount = 0;
+            userAnswers.forEach(({ problem, userAnswer, correct, correctAnswer }) => {
+                let listItem = document.createElement("li");
+                listItem.innerHTML = `${problem} = <strong>${userAnswer}</strong>`;
+                listItem.classList.add(correct ? "correct" : "incorrect");
+
+                if (!correct) {
+                    listItem.innerHTML += ` (Õige vastus: ${correctAnswer})`;
+                } else {
+                    correctCount++;
+                }
+
+                resultsList.appendChild(listItem);
+            });
+
+            document.getElementById("score").textContent = `Õiged vastused: ${correctCount} / 20`;
+        }
+    </script>
+
+</body>
+</html>
